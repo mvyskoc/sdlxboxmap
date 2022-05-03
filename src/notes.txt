@@ -1,0 +1,73 @@
+MainApp::e_mapping_result MainApp::axismap(evdevjoy::EvdevJoystick &gamepad,
+        std::string_view button_name, std::string &result)
+{
+    e_mapping_result retvalue = e_mapping_result::UNSUPPORTED;
+
+    if (button_name.size() < 2) {
+        result = "Wrong axis name: ";
+        result.append(button_name);
+        return e_mapping_result::UNSUPPORTED;
+    }
+
+    bool invert_axis = false;
+    
+    if (button_name[0] == '+') {
+        button_name.remove_prefix(1);
+    } else if (button_name[0] == '-') {
+        invert_axis = !invert_axis;
+        button_name.remove_prefix(1);
+    }
+    
+    std::string button_name_lower = string::lower(button_name);
+    t_MapButton2SDLButton::const_iterator it = MapButton2SDLButton.find(button_name_lower);
+    if (it != MapButton2SDLButton.end()) {
+        EventButtonBinding event_binding = gamepad.get_event_binding(it->second);
+        if (event_binding) {
+            if (event_binding.bind->input_type == BindType::BINDTYPE_AXIS) {
+                if (event_binding.bind->output_type == BindType::BINDTYPE_AXIS) {
+                    if (event_binding.bind->output.axis_type == ControllerAxisType::HALF_AXIS_NEGATIVE) {
+                        invert_axis = !invert_axis;
+                    }
+                }
+                if (event_binding.bind->input.invert_input) {
+                    invert_axis = !invert_axis;
+                }
+            } else if ((event_binding.bind->input_type == BindType::BINDTYPE_HAT) && 
+                    (event_binding.bind->output_type == BindType::BINDTYPE_BUTTON)) {
+                if ( (event_binding.bind->output.button == ControllerButton::BUTTON_DPAD_LEFT) && 
+                    (event_binding.bind->input.hat_mask == HatMask::RIGHT)) {
+                        invert_axis = !invert_axis;
+                } else if ( (event_binding.bind->output.button == ControllerButton::BUTTON_DPAD_RIGHT) && 
+                    (event_binding.bind->input.hat_mask == HatMask::LEFT)) {
+                        invert_axis = !invert_axis;
+                } else if ( (event_binding.bind->output.button == ControllerButton::BUTTON_DPAD_UP) && 
+                    (event_binding.bind->input.hat_mask == HatMask::DOWN)) {
+                        invert_axis = !invert_axis;
+                } else if ( (event_binding.bind->output.button == ControllerButton::BUTTON_DPAD_DOWN) && 
+                    (event_binding.bind->input.hat_mask == HatMask::UP)) {
+                        invert_axis = !invert_axis;
+                }
+            }
+            
+            if (invert_axis) {
+                result.clear();
+                result.append("-");
+                result.append(button_name);
+            } else {
+                result = button_name;
+            }
+            retvalue = e_mapping_result::FOUND;
+        } else {
+            LOG(ERROR) << "Unsupported gamepad button: " << button_name;
+            result = "Unsupported gamepad mapping: ";
+            result.append(button_name);  
+            retvalue = e_mapping_result::UNSUPPORTED;
+        }
+    } else {
+        LOG(ERROR) << "Cannot find button mapping for: " << button_name;
+        result = "Unknown button: ";
+        result.append(button_name);
+        retvalue = e_mapping_result::UNSUPPORTED;
+    }
+    return retvalue;
+}
