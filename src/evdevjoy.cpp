@@ -177,7 +177,9 @@ void ControllerMapping::add_button_binding(const std::string &button_name, const
         } else if (button_def.at(i_button_def) == 'b') {
             i_button_def++;
             binding.input_type = BindType::BINDTYPE_BUTTON;
-            binding.input.button = std::stoi( button_def.substr(i_button_def++, 1) );
+            std::size_t number_size = 0;
+            binding.input.button = std::stoi( button_def.substr(i_button_def), &number_size );
+            i_button_def += number_size;
         } else if ( (button_def.at(i_button_def) == 'h') && (button_def.at(i_button_def+2) == '.') )  {
             i_button_def++;
             binding.input_type = BindType::BINDTYPE_HAT;
@@ -189,6 +191,12 @@ void ControllerMapping::add_button_binding(const std::string &button_name, const
                 <<  button_def.at(i_button_def) << "\""; 
             return; // Unexpected joystick element 
         }
+
+    if (i_button_def < button_def.length()-1) {
+        LOG(WARNING) << "add_button_binding: processed " 
+            << i_button_def 
+            << " characters from button definition: " << button_def;
+    }
     } catch (const std::out_of_range& oor) {
         LOG(ERROR) << "add_button_binding: unexpected end of the button definition\n" \
             << button_def; 
